@@ -134,11 +134,8 @@ struct ContentView: View {
                     game.playerSelected(value)
                 } label: {
                     Text("\(value)")
-                        .font(.title3.bold())
-                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(value <= game.maxSelectable ? .purple : .gray)
+                .buttonStyle(DemonicNumberButtonStyle())
                 .disabled(game.turn != .player || game.winner != nil || value > game.maxSelectable)
             }
         }
@@ -161,6 +158,48 @@ struct ContentView: View {
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .padding(40)
+    }
+}
+
+/// Zahlen-Knöpfe im Look des App-Icons: dunkler Steinsockel, lila/grüner
+/// Flammen-Rahmen und ein leichtes Glühen, das beim Drücken zusammenfällt.
+private struct DemonicNumberButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let glowColors: [Color] = isEnabled ? [.purple, .green] : [.gray.opacity(0.35), .gray.opacity(0.25)]
+
+        configuration.label
+            .font(.system(.title3, design: .rounded).weight(.heavy))
+            .foregroundStyle(
+                isEnabled
+                    ? AnyShapeStyle(LinearGradient(colors: [.white, .green], startPoint: .top, endPoint: .bottom))
+                    : AnyShapeStyle(Color.white.opacity(0.3))
+            )
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: isEnabled
+                                ? [Color(red: 0.1, green: 0.03, blue: 0.16), Color.black]
+                                : [Color(white: 0.09), Color(white: 0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: glowColors, startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(color: isEnabled ? .purple.opacity(0.55) : .clear, radius: configuration.isPressed ? 2 : 7)
+            .shadow(color: isEnabled ? .green.opacity(0.4) : .clear, radius: configuration.isPressed ? 1 : 4)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
