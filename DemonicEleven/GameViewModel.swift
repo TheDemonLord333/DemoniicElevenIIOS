@@ -2,39 +2,18 @@
 //  GameViewModel.swift
 //  DemonicEleven
 //
+//  Einzelspieler-Modus: lokales Spiel gegen eine simple KI, keine Internetverbindung nötig.
+//
 
 import Foundation
 import Combine
 
 @MainActor
-final class GameViewModel: ObservableObject {
-
-    enum Turn {
-        case player
-        case computer
-    }
-
-    enum Winner {
-        case player
-        case computer
-    }
-
-    struct LogEntry: Identifiable {
-        enum Kind {
-            case player
-            case computer
-            case system
-        }
-
-        let id = UUID()
-        let text: String
-        let kind: Kind
-    }
-
+final class GameViewModel: GameEngine {
     @Published private(set) var total = 0
-    @Published private(set) var turn: Turn = .player
-    @Published private(set) var winner: Winner?
-    @Published private(set) var log: [LogEntry] = []
+    @Published private(set) var log: [GameLogEntry] = []
+    @Published private(set) var resultText: String?
+    @Published private(set) var isPlayerTurn = true
     @Published private(set) var isComputerThinking = false
 
     private let target = 100
@@ -44,31 +23,40 @@ final class GameViewModel: ObservableObject {
     private let winningPositions = [1, 12, 23, 34, 45, 56, 67, 78, 89, 100]
 
     var maxSelectable: Int { min(10, target - total) }
+    var canAct: Bool { isPlayerTurn && resultText == nil }
 
-    init() {
-        startNewGame()
+    var statusText: String {
+        if resultText != nil { return "" }
+        if isPlayerTurn { return "Du bist dran" }
+        return isComputerThinking ? "Computer denkt nach..." : "Computer ist dran"
     }
 
-    func startNewGame() {
+    var statusKind: GameStatusKind { isPlayerTurn ? .me : .opponent }
+
+    init() {
+        restart()
+    }
+
+    func restart() {
         total = 0
-        winner = nil
+        resultText = nil
         log = []
         isComputerThinking = false
-        turn = Bool.random() ? .player : .computer
-        log.append(LogEntry(
-            text: turn == .player ? "Neues Spiel! Du beginnst." : "Neues Spiel! Der Computer beginnt.",
+        isPlayerTurn = Bool.random()
+        log.append(GameLogEntry(
+            text: isPlayerTurn ? "Neues Spiel! Du beginnst." : "Neues Spiel! Der Computer beginnt.",
             kind: .system
         ))
-        if turn == .computer {
+        if !isPlayerTurn {
             performComputerTurn()
         }
     }
 
-    func playerSelected(_ value: Int) {
-        guard turn == .player, winner == nil, value >= 1, value <= maxSelectable else { return }
-        applyMove(value: value, kind: .player)
-        guard winner == nil else { return }
-        turn = .computer
+    func selectValue(_ value: Int) {
+        guard isPlayerTurn, resultText == nil, value >= 1, value <= maxSelectable else { return }
+        applyMove(value: value, kind: .me)
+        guard resultText == nil else { return }
+        isPlayerTurn = false
         performComputerTurn()
     }
 
@@ -77,12 +65,12 @@ final class GameViewModel: ObservableObject {
         let thinkingDelay = Double.random(in: 0.6...1.3)
         Task {
             try? await Task.sleep(for: .seconds(thinkingDelay))
-            guard winner == nil else { return }
+            guard resultText == nil else { return }
             let value = computerMove()
             isComputerThinking = false
-            applyMove(value: value, kind: .computer)
-            if winner == nil {
-                turn = .player
+            applyMove(value: value, kind: .opponent)
+            if resultText == nil {
+                isPlayerTurn = true
             }
         }
     }
@@ -100,16 +88,14 @@ final class GameViewModel: ObservableObject {
         return Int.random(in: 1...maxVal)
     }
 
-    private func applyMove(value: Int, kind: LogEntry.Kind) {
+    private func applyMove(value: Int, kind: GameLogEntry.Kind) {
         let from = total
         total += value
-        let prefix = kind == .player ? "Du hast" : "Computer hat"
-        log.append(LogEntry(text: "\(prefix) \(value) hinzugefügt! \(from) -> \(total)", kind: kind))
+        let prefix = kind == .me ? "Du hast" : "Computer hat"
+        log.append(GameLogEntry(text: "\(prefix) \(value) hinzugefügt! \(from) -> \(total)", kind: kind))
 
         if total == target {
-            winner = kind == .player ? .player : .computer
-            let resultText = winner == .player ? "🎉 Du hast gewonnen!" : "💀 Der Computer hat gewonnen!"
-            log.append(LogEntry(text: resultText, kind: .system))
+            resultText = kind == .me ? "🎉 Du hast gewonnen!" : "💀 Der Computer hat gewonnen!"
         }
     }
 }
