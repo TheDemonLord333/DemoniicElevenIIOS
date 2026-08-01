@@ -71,8 +71,12 @@ npm install --production
 
 ```bash
 cp .env.example .env
-# Port bei Bedarf anpassen, PM2 liest ihn aus ecosystem.config.js (env.PORT)
+# PORT in .env anpassen, falls 4000 auf dem Server schon belegt ist -
+# .env wird beim Start automatisch geladen (dotenv), z.B. PORT=3010
 ```
+
+Wichtig: Der Port in `.env` muss zu dem Port passen, den ihr später im
+nginx-`proxy_pass` (Schritt 5) einsetzt - sonst gibt es ein 502 Bad Gateway.
 
 ### 4. Mit PM2 starten
 
@@ -87,7 +91,9 @@ Nützliche PM2-Befehle:
 ```bash
 pm2 status
 pm2 logs demonic-eleven-backend
-pm2 restart demonic-eleven-backend
+# Nach einer Aenderung an .env: --update-env nicht vergessen,
+# sonst laeuft der Prozess mit den alten Umgebungsvariablen weiter
+pm2 restart demonic-eleven-backend --update-env
 ```
 
 ### 5. Nginx als Reverse-Proxy vor den WebSocket-Server schalten

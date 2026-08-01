@@ -8,9 +8,10 @@ module.exports = {
       exec_mode: "fork",
       autorestart: true,
       watch: false,
+      // PORT wird bewusst NICHT hier gesetzt, sondern aus Backend/.env gelesen
+      // (siehe .env.example) - so muss zum Port-Wechsel nur .env angepasst werden.
       env: {
-        NODE_ENV: "production",
-        PORT: 4000
+        NODE_ENV: "production"
       }
     }
   ]

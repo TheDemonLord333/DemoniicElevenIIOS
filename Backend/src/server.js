@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const http = require('http');
 const { randomUUID } = require('crypto');
 const { WebSocketServer } = require('ws');
